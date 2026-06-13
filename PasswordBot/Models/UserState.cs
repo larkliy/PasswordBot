@@ -1,6 +1,6 @@
 ﻿namespace PasswordBot.Models;
 
-public enum GlobalState
+public enum UserState
 {
     Idle,
     PasswordGenerating

@@ -1,4 +1,5 @@
 ﻿using PasswordBot.States;
+using PasswordBot.States.AddPassword;
 using Telegram.Bot;
 
 namespace PasswordBot.Models;
@@ -6,25 +7,20 @@ namespace PasswordBot.Models;
 public class UserProfile
 {
     public long TelegramId { get; set; }
-    public GlobalState State { get; set; } = GlobalState.Idle;
-    public TelegramStateMachineBase? StateMachine {  get; set; }
+    public UserState State { get; set; } = UserState.Idle;
+    public CallbackMatcherBase? CallbackMatcher { get; set; }
 
-    public async Task FireAddPasswordMachine(ITelegramBotClient bot, string callbackData, CancellationToken token = default)
+    public async Task HandleStateMachineByCallback(ITelegramBotClient bot,
+                                                   string callbackData,
+                                                   CancellationToken token = default)
     {
-        switch (callbackData)
+        if (callbackData.StartsWith(CallbackNames.GeneratePassword))
         {
-            case "generate_password":
-                StateMachine ??= new AddPasswordStateMachine(bot, TelegramId);
-
-                State = GlobalState.PasswordGenerating;
-                await StateMachine.Start(token);
-                break;
-
-            case "generate_password_cancel":
-                State = GlobalState.Idle;
-                if (StateMachine is { } machine)
-                    await machine.Cancel(token);
-                break;
+            if (CallbackMatcher is not AddPasswordCallbackMatcher)
+            {
+                CallbackMatcher = new AddPasswordCallbackMatcher(bot, this, CallbackNames.GeneratePassword);
+            }
+            await CallbackMatcher.Begin(callbackData, token);
         }
     }
 }

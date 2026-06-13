@@ -1,8 +1,5 @@
-using PasswordBot.Models;
-using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using Telegram.Bot;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PasswordBot.States.AddPassword;
@@ -63,7 +60,7 @@ public class AddPasswordStateMachine : TelegramStateMachineBase
 
                 break;
             case AddPasswordState.WaitForPassLength:
-                if (!int.TryParse(text, out int value) && value < 1 || value > 100)
+                if (!int.TryParse(text, out int value) || value < 1 || value > 100)
                 {
                     await Client.SendMessage(
                         FromId, 

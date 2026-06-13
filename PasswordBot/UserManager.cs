@@ -11,9 +11,4 @@ internal class UserManager
     {
         s_users.TryAdd(user.TelegramId, user);
     }
-
-    public static void RemoveUser(UserProfile user)
-    {
-        s_users.Remove(user.TelegramId, out _);
-    }
 }

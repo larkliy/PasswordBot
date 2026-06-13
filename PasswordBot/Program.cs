@@ -26,7 +26,7 @@ bot.OnMessage += async (msg, type) =>
 
     var user = await RegisterUserIfNotExists(msg.From!.Id);
 
-    if (user.State == GlobalState.Idle)
+    if (user.State == UserState.Idle)
     {
         var welcomeText =
         """
@@ -39,9 +39,9 @@ bot.OnMessage += async (msg, type) =>
             replyMarkup: InlineKeyboardButton.WithCallbackData("🔑Сгенерировать пароль", "generate_password"),
             cancellationToken: token);
     }
-    else if (user.State == GlobalState.PasswordGenerating)
+    else
     {
-        await user.StateMachine!.HandleMessage(text, token);
+        await user.CallbackMatcher!.HandleMessage(text, token);
     }
 };
 
@@ -52,11 +52,8 @@ bot.OnUpdate += async (update) =>
     var userId = update.CallbackQuery.From.Id;
 
     var user = await RegisterUserIfNotExists(update.CallbackQuery.From.Id);
-    
-    if (data.StartsWith("generate_password"))
-    {
-        await user.FireAddPasswordMachine(bot, data, token);
-    }
+
+    await user.HandleStateMachineByCallback(bot, data, user, token);
 
     await bot.AnswerCallbackQuery(update.CallbackQuery.Id, cancellationToken: token);
 };
