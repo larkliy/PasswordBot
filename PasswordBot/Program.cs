@@ -1,7 +1,5 @@
 ﻿using PasswordBot;
 using PasswordBot.Models;
-using PasswordBot.States;
-using System.Security.Cryptography;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -41,10 +39,9 @@ bot.OnMessage += async (msg, type) =>
             replyMarkup: InlineKeyboardButton.WithCallbackData("🔑Сгенерировать пароль", "generate_password"),
             cancellationToken: token);
     }
-    else if (user.State == GlobalState.PasswordGenerating && 
-        user.PasswordGenStateMachine is AddPasswordStateMachine machine)
+    else if (user.State == GlobalState.PasswordGenerating)
     {
-        await machine.HandleMessage(text, async () => await PasswordGenerationCompleted(user, machine), token);
+        await user.StateMachine!.HandleMessage(text, token);
     }
 };
 
@@ -60,6 +57,8 @@ bot.OnUpdate += async (update) =>
     {
         await user.FireAddPasswordMachine(bot, data, token);
     }
+
+    await bot.AnswerCallbackQuery(update.CallbackQuery.Id, cancellationToken: token);
 };
 
 bot.OnError += async (exception, source) =>
@@ -84,19 +83,4 @@ async Task<UserProfile> RegisterUserIfNotExists(long userId)
     }
 
     return UserManager.s_users[userId];
-}
-
-async Task PasswordGenerationCompleted(UserProfile user, AddPasswordStateMachine machine, CancellationToken token = default)
-{
-    var buffer = machine.Buffer;
-    var password = RandomNumberGenerator.GetString(buffer.PasswordSymbols, buffer.PasswordLength);
-
-    var passwordText =
-    $"""
-    Ваш пароль для приложения {buffer.AppName}:
-
-    {password}
-    """;
-
-    await bot.SendMessage(user.TelegramId, passwordText, cancellationToken: token);
 }

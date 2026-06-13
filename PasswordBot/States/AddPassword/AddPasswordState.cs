@@ -1,4 +1,4 @@
-namespace PasswordBot.States;
+namespace PasswordBot.States.AddPassword;
 
 public enum AddPasswordState
 {
