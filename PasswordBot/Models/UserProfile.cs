@@ -1,5 +1,4 @@
-﻿using PasswordBot.States;
-using PasswordBot.States.AddPassword;
+﻿using PasswordBot.Dialogs;
 using Telegram.Bot;
 
 namespace PasswordBot.Models;
@@ -8,19 +7,36 @@ public class UserProfile
 {
     public long TelegramId { get; set; }
     public UserState State { get; set; } = UserState.Idle;
-    public CallbackMatcherBase? CallbackMatcher { get; set; }
+    public DialogBase? CurrentDialog { get; set; }
 
-    public async Task HandleStateMachineByCallback(ITelegramBotClient bot,
-                                                   string callbackData,
-                                                   CancellationToken token = default)
+    public async Task HandleCallback(ITelegramBotClient bot, string data, CancellationToken token)
     {
-        if (callbackData.StartsWith(CallbackNames.GeneratePassword))
+        if (CurrentDialog != null && data == CurrentDialog.CancelCallback)
         {
-            if (CallbackMatcher is not AddPasswordCallbackMatcher)
-            {
-                CallbackMatcher = new AddPasswordCallbackMatcher(bot, this, CallbackNames.GeneratePassword);
-            }
-            await CallbackMatcher.Begin(callbackData, token);
+            State = UserState.Idle;
+            await CurrentDialog.Cancel(token);
+            CurrentDialog = null;
+            return;
+        }
+
+        if (State == UserState.Idle && data == "generate_password")
+        {
+            State = UserState.PasswordGenerating;
+            CurrentDialog = new PasswordGeneratorDialog(bot, this);
+            await CurrentDialog.Start(token);
+        }
+    }
+
+    public async Task HandleMessage(string text, CancellationToken token)
+    {
+        if (CurrentDialog == null) return;
+
+        await CurrentDialog.HandleMessage(text, token);
+
+        if (CurrentDialog.IsCompleted)
+        {
+            State = UserState.Idle;
+            CurrentDialog = null;
         }
     }
 }

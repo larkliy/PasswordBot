@@ -3,12 +3,12 @@ using System.Collections.Concurrent;
 
 namespace PasswordBot;
 
-internal class UserManager
+internal static class UserManager
 {
-    public static ConcurrentDictionary<long, UserProfile> s_users = [];
+    private static ConcurrentDictionary<long, UserProfile> s_users = [];
 
-    public static void AddUser(UserProfile user)
+    public static UserProfile GetOrCreate(long telegramId)
     {
-        s_users.TryAdd(user.TelegramId, user);
+        return s_users.GetOrAdd(telegramId, id => new UserProfile { TelegramId = id });
     }
 }

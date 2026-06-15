@@ -19,29 +19,22 @@ await bot.DropPendingUpdates();
 var me = await bot.GetMe();
 Console.WriteLine($"Бот {me.Username} запущён!");
 
-
 bot.OnMessage += async (msg, type) =>
 {
     if (msg.Text is not { } text) return;
 
-    var user = await RegisterUserIfNotExists(msg.From!.Id);
+    var user = UserManager.GetOrCreate(msg.From!.Id);
 
     if (user.State == UserState.Idle)
     {
-        var welcomeText =
-        """
-        Воспользуйтесь кнопками ниже:
-        """;
-
-        await bot.SendMessage(
-            msg.From!.Id,
-            welcomeText,
-            replyMarkup: InlineKeyboardButton.WithCallbackData("🔑Сгенерировать пароль", "generate_password"),
+        await bot.SendMessage(msg.From!.Id,
+            "Воспользуйтесь кнопками ниже:",
+            replyMarkup: InlineKeyboardButton.WithCallbackData("🔑 Сгенерировать пароль", "generate_password"),
             cancellationToken: token);
     }
     else
     {
-        await user.CallbackMatcher!.HandleMessage(text, token);
+        await user.HandleMessage(text, token);
     }
 };
 
@@ -49,11 +42,9 @@ bot.OnUpdate += async (update) =>
 {
     if (update.CallbackQuery is not { Data: { } data }) return;
 
-    var userId = update.CallbackQuery.From.Id;
+    var user = UserManager.GetOrCreate(update.CallbackQuery.From.Id);
 
-    var user = await RegisterUserIfNotExists(update.CallbackQuery.From.Id);
-
-    await user.HandleStateMachineByCallback(bot, data, user, token);
+    await user.HandleCallback(bot, data, token);
 
     await bot.AnswerCallbackQuery(update.CallbackQuery.Id, cancellationToken: token);
 };
@@ -66,18 +57,3 @@ bot.OnError += async (exception, source) =>
 
 while (Console.ReadKey(true).Key != ConsoleKey.Escape) ;
 cts.Cancel();
-
-async Task<UserProfile> RegisterUserIfNotExists(long userId)
-{
-    if (!UserManager.s_users.ContainsKey(userId))
-    {
-        UserManager.AddUser(new()
-        {
-            TelegramId = userId
-        });
-
-        await bot.SendMessage(userId, "Вы успешно зарегистрированы!", cancellationToken: token);
-    }
-
-    return UserManager.s_users[userId];
-}
